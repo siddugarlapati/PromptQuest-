@@ -53,7 +53,7 @@ export default function Analytics() {
     // Component scores
     const worldScore = (worldsComp / 6) * 40;        // 40% from worlds
     const promptScore = (promptBest / 100) * 30;     // 30% from best prompt score
-    const levelScore = Math.min(level / 20, 1) * 20; // 20% from level
+    const levelScore = Math.min(level.level / 20, 1) * 20; // 20% from level
     const mistakePenalty = Math.min(totalMistakes * 2, 10); // -10% max from mistakes
     const aiMeterPercent = Math.round(Math.max(0, Math.min(100, worldScore + promptScore + levelScore - mistakePenalty + (xp > 0 ? 5 : 0))));
 
@@ -102,7 +102,7 @@ export default function Analytics() {
                     {[
                         { label: 'Worlds Completed', value: `${worldsComp}/6`, color: '#C02633', icon: '🌍' },
                         { label: 'Total XP Earned', value: `${xp} XP`, color: '#2563EB', icon: '⚡' },
-                        { label: 'Current Level', value: `Lv ${getLevel()}`, color: '#16a34a', icon: '⭐' },
+                        { label: 'Current Level', value: `Lv ${level.level}`, color: '#16a34a', icon: '⭐' },
                         { label: 'Best Prompt Score', value: promptBest > 0 ? `${promptBest}/100` : '—', color: '#7C3AED', icon: '✍️' },
                     ].map((s, i) => (
                         <div key={i} className="glass-card" style={{ padding: '16px 20px' }}>
