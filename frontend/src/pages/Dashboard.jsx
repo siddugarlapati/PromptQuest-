@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 
@@ -42,6 +42,45 @@ export default function Dashboard() {
     const navigate = useNavigate();
     const { xp, getLevel, completedWorlds, badges, playerName, setPlayerName, resetProgress } = useGame();
     const level = getLevel();
+
+    // WebSocket Leaderboard State
+    const [leaderboard, setLeaderboard] = useState([
+        { id: 101, username: 'Dr. John', xp: 420 },
+        { id: 102, username: 'Alice', xp: 210 },
+        { id: 103, username: 'Bob', xp: 50 },
+    ]);
+    const ws = useRef(null);
+
+    useEffect(() => {
+        // Connect to FastAPI WebSocket
+        ws.current = new WebSocket('ws://localhost:8000/ws/leaderboard');
+
+        ws.current.onmessage = (event) => {
+            try {
+                const message = JSON.parse(event.data);
+                if (message.type === 'xp_update') {
+                    const { user_id, username, xp: newXP } = message.data;
+                    setLeaderboard(prev => {
+                        const existing = prev.find(u => u.username === username);
+                        let updated;
+                        if (existing) {
+                            updated = prev.map(u => u.username === username ? { ...u, xp: newXP } : u);
+                        } else {
+                            updated = [...prev, { id: user_id, username, xp: newXP }];
+                        }
+                        // Sort by XP descending
+                        return updated.sort((a, b) => b.xp - a.xp).slice(0, 10);
+                    });
+                }
+            } catch (e) {
+                console.error("WebSocket message error", e);
+            }
+        };
+
+        return () => {
+            if (ws.current) ws.current.close();
+        };
+    }, []);
 
     return (
         <div className="container" style={{ paddingTop: 32, paddingBottom: 48, position: 'relative', zIndex: 1 }}>
@@ -93,39 +132,77 @@ export default function Dashboard() {
             </div>
 
             {/* World Cards */}
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: 20 }}>
-                🌏 Learning Worlds
-            </h2>
-            <div style={styles.worldsGrid}>
-                {WORLDS.map(world => {
-                    const done = completedWorlds.includes(world.id);
-                    return (
-                        <div
-                            key={world.id}
-                            className="world-card"
-                            onClick={() => navigate(`/worlds/${world.id}`)}
-                            style={{ opacity: 1 }}
-                        >
-                            {done && (
-                                <div style={styles.doneBadge}>✅ Completed</div>
-                            )}
-                            <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>{world.emoji}</div>
-                            <div style={{ fontSize: '0.7rem', color: world.color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
-                                {world.tag}
-                            </div>
-                            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: 8 }}>{world.title}</h3>
-                            <p style={{ fontSize: '0.85rem', color: '#555566', lineHeight: 1.5, marginBottom: 16 }}>{world.desc}</p>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '0.75rem', background: 'rgba(192,38,51,0.08)', color: '#C02633', padding: '3px 10px', borderRadius: 100, fontWeight: 600 }}>
-                                    {world.xp}
-                                </span>
-                                <span style={{ fontSize: '0.8rem', color: world.color, fontWeight: 600 }}>
-                                    World {world.id} →
-                                </span>
-                            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: 32 }}>
+                {/* Left Column: Worlds */}
+                <div>
+                    <h2 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: 20 }}>
+                        🌏 Learning Worlds
+                    </h2>
+                    <div style={styles.worldsGrid}>
+                        {WORLDS.map(world => {
+                            const done = completedWorlds.includes(world.id);
+                            return (
+                                <div
+                                    key={world.id}
+                                    className="world-card"
+                                    onClick={() => navigate(`/worlds/${world.id}`)}
+                                    style={{ opacity: 1 }}
+                                >
+                                    {done && (
+                                        <div style={styles.doneBadge}>✅ Completed</div>
+                                    )}
+                                    <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>{world.emoji}</div>
+                                    <div style={{ fontSize: '0.7rem', color: world.color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
+                                        {world.tag}
+                                    </div>
+                                    <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: 8 }}>{world.title}</h3>
+                                    <p style={{ fontSize: '0.85rem', color: '#555566', lineHeight: 1.5, marginBottom: 16 }}>{world.desc}</p>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '0.75rem', background: 'rgba(192,38,51,0.08)', color: '#C02633', padding: '3px 10px', borderRadius: 100, fontWeight: 600 }}>
+                                            {world.xp}
+                                        </span>
+                                        <span style={{ fontSize: '0.8rem', color: world.color, fontWeight: 600 }}>
+                                            World {world.id} →
+                                        </span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Right Column: Live Leaderboard */}
+                <div>
+                    <h2 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: 20 }}>
+                        🏆 Live Leaderboard
+                    </h2>
+                    <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+                        <div style={{ background: '#F8F9FA', padding: '12px 16px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#555566', textTransform: 'uppercase' }}>STUDENT</span>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#555566', textTransform: 'uppercase' }}>XP</span>
                         </div>
-                    );
-                })}
+                        <div style={{ padding: 8 }}>
+                            {leaderboard.map((user, idx) => (
+                                <div key={user.username} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderRadius: 8, background: user.username === playerName ? 'rgba(192,38,51,0.08)' : 'transparent', borderBottom: idx < leaderboard.length - 1 ? '1px solid #E5E7EB' : 'none' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                        <div style={{ fontSize: '1rem', width: 24, textAlign: 'center', fontWeight: 700, color: idx === 0 ? '#D4A017' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#9999aa' }}>
+                                            {idx + 1}
+                                        </div>
+                                        <div style={{ fontWeight: user.username === playerName ? 700 : 500, color: user.username === playerName ? '#C02633' : '#1A1A2E' }}>
+                                            {user.username}
+                                        </div>
+                                    </div>
+                                    <div style={{ fontWeight: 700, color: '#1A1A2E' }}>
+                                        {user.xp}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <div style={{ padding: 12, background: 'rgba(217,119,6,0.06)', borderTop: '1px solid rgba(217,119,6,0.15)', fontSize: '0.75rem', color: '#b45309', textAlign: 'center' }}>
+                            🟢 Connected to Live Server
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Badges */}

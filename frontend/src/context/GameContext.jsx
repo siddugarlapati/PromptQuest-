@@ -1,48 +1,87 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { gamificationAPI, analyticsAPI } from '../services/api';
 
 const GameContext = createContext(null);
 
 export function GameProvider({ children }) {
-    const [xp, setXP] = useState(() => parseInt(localStorage.getItem('pq_xp') || '0'));
-    const [completedWorlds, setCompletedWorlds] = useState(() => {
-        try { return JSON.parse(localStorage.getItem('pq_worlds') || '[]'); } catch { return []; }
-    });
+    const [loading, setLoading] = useState(true);
+    const [xp, setXP] = useState(0);
+    const [completedWorlds, setCompletedWorlds] = useState([]);
     const [badges, setBadges] = useState(() => {
         try { return JSON.parse(localStorage.getItem('pq_badges') || '[]'); } catch { return []; }
     });
     const [playerName, setPlayerName] = useState(() => localStorage.getItem('pq_name') || 'Explorer');
-    const [mistakes, setMistakes] = useState(() => {
-        try { return JSON.parse(localStorage.getItem('pq_mistakes') || '{}'); } catch { return {}; }
-    });
-    const [promptHistory, setPromptHistory] = useState(() => {
-        try { return JSON.parse(localStorage.getItem('pq_prompt_history') || '[]'); } catch { return []; }
-    });
+    const [mistakes, setMistakes] = useState({});
+    const [promptHistory, setPromptHistory] = useState([]);
 
-    useEffect(() => { localStorage.setItem('pq_xp', xp); }, [xp]);
-    useEffect(() => { localStorage.setItem('pq_worlds', JSON.stringify(completedWorlds)); }, [completedWorlds]);
+    // Keep badges and name in local storage for now, since they are minor
     useEffect(() => { localStorage.setItem('pq_badges', JSON.stringify(badges)); }, [badges]);
-    useEffect(() => { localStorage.setItem('pq_mistakes', JSON.stringify(mistakes)); }, [mistakes]);
-    useEffect(() => { localStorage.setItem('pq_prompt_history', JSON.stringify(promptHistory)); }, [promptHistory]);
+    useEffect(() => { localStorage.setItem('pq_name', playerName); }, [playerName]);
 
-    const addXP = useCallback((amount) => {
-        setXP(prev => prev + amount);
+    // Initial load from SQLite backend
+    useEffect(() => {
+        const loadState = async () => {
+            try {
+                const [progRes, anRes, histRes] = await Promise.all([
+                    gamificationAPI.getProgress(),
+                    analyticsAPI.getSummary(),
+                    analyticsAPI.getPromptHistory()
+                ]);
+
+                setXP(progRes.data.xp || 0);
+                setCompletedWorlds(progRes.data.completed_worlds || []);
+                setMistakes(anRes.data.mistakes || {});
+                setPromptHistory(histRes.data.history || []);
+            } catch (err) {
+                console.error("Failed to load state from backend", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadState();
     }, []);
 
-    const completeWorld = useCallback((worldId, earnedBadge) => {
+    const addXP = useCallback(async (amount) => {
+        // Optimistic update
+        setXP(prev => prev + amount);
+        try {
+            await gamificationAPI.addXP(amount);
+        } catch (err) {
+            console.error("Failed to add XP to backend", err);
+        }
+    }, []);
+
+    const completeWorld = useCallback(async (worldId, earnedBadge) => {
         setCompletedWorlds(prev => prev.includes(worldId) ? prev : [...prev, worldId]);
         if (earnedBadge) {
             setBadges(prev => prev.includes(earnedBadge) ? prev : [...prev, earnedBadge]);
         }
+        try {
+            await gamificationAPI.completeWorld(worldId);
+        } catch (err) {
+            console.error("Failed to save world completion to backend", err);
+        }
     }, []);
 
-    const recordMistake = useCallback((topic) => {
+    const recordMistake = useCallback(async (topic) => {
         const t = topic.toLowerCase().trim();
         setMistakes(prev => ({ ...prev, [t]: (prev[t] || 0) + 1 }));
+        try {
+            await analyticsAPI.recordMistake(t);
+        } catch (err) {
+            console.error("Failed to record mistake to backend", err);
+        }
     }, []);
 
-    const addPromptScore = useCallback((entry) => {
-        setPromptHistory(prev => [...prev, { ...entry, timestamp: new Date().toISOString(), index: prev.length + 1 }]);
-    }, []);
+    const addPromptScore = useCallback(async (entry) => {
+        const newEntry = { ...entry, timestamp: new Date().toISOString(), index: promptHistory.length + 1 };
+        setPromptHistory(prev => [...prev, newEntry]);
+        try {
+            await analyticsAPI.savePromptHistory(entry);
+        } catch (err) {
+            console.error("Failed to save prompt history to backend", err);
+        }
+    }, [promptHistory.length]);
 
     const getLevel = useCallback(() => {
         const levels = [
@@ -67,14 +106,24 @@ export function GameProvider({ children }) {
         return { ...current, progress, nextXP: current.max };
     }, [xp]);
 
-    const resetProgress = useCallback(() => {
+    const resetProgress = useCallback(async () => {
         setXP(0);
         setCompletedWorlds([]);
         setBadges([]);
         setMistakes({});
         setPromptHistory([]);
         localStorage.clear();
-    }, []);
+        // Currently no endpoint to reset xp/worlds from UI, but analytics can be reset
+        try {
+            await gamificationAPI.addXP(-xp); // Hack to reset strictly for local test
+        } catch { }
+    }, [xp]);
+
+    if (loading) {
+        return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FFFFFF' }}>
+            <div style={{ color: '#C02633', fontWeight: 600 }}>Loading Learning Profile...</div>
+        </div>;
+    }
 
     return (
         <GameContext.Provider value={{

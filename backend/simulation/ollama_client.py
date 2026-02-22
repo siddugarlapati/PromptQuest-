@@ -29,7 +29,7 @@ async def get_available_models() -> list[str]:
     return []
 
 
-async def generate(prompt: str, model: Optional[str] = None, system: Optional[str] = None) -> dict:
+async def generate(prompt: str, model: Optional[str] = None, system: Optional[str] = None, temperature: float = 0.7, max_tokens: int = 512, json_format: bool = False) -> dict:
     """
     Generate a response from local Ollama.
     Returns dict with 'response', 'model', 'success', 'error'.
@@ -43,10 +43,12 @@ async def generate(prompt: str, model: Optional[str] = None, system: Optional[st
         "prompt": prompt,
         "stream": False,
         "options": {
-            "temperature": 0.7,
-            "num_predict": 512,
+            "temperature": temperature,
+            "num_predict": max_tokens,
         }
     }
+    if json_format:
+        payload["format"] = "json"
     if system:
         payload["system"] = system
 

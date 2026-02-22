@@ -6,9 +6,17 @@ const TOPIC_META = {
     pattern: { label: 'Pattern Recognition', emoji: '🧠', world: 1, color: '#C02633' },
     prediction: { label: 'Next-Word Prediction', emoji: '📊', world: 2, color: '#2563EB' },
     tokenization: { label: 'Tokenization', emoji: '🔤', world: 3, color: '#0891B2' },
-    prompt: { label: 'Prompt Engineering', emoji: '✍️', world: 4, color: '#d97706' },
-    hallucination: { label: 'Hallucination Detection', emoji: '🕵️', world: 5, color: '#7C3AED' },
-    training: { label: 'AI Training', emoji: '🏋️', world: 6, color: '#16a34a' },
+    transformers: { label: 'Transformers', emoji: '🤖', world: 4, color: '#7C3AED' },
+    attention: { label: 'Attention Mechanism', emoji: '🎯', world: 5, color: '#d97706' },
+    embeddings: { label: 'Vector Embeddings', emoji: '🗺️', world: 6, color: '#10b981' },
+    context: { label: 'Context Windows', emoji: '🧠', world: 7, color: '#ec4899' },
+    prompt: { label: 'Prompt Engineering', emoji: '✍️', world: 8, color: '#d97706' },
+    hallucination: { label: 'Hallucination Detection', emoji: '🕵️', world: 9, color: '#7C3AED' },
+    training: { label: 'AI Training', emoji: '🏋️', world: 10, color: '#16a34a' },
+    rag: { label: 'RAG & Vector DB', emoji: '📚', world: 11, color: '#6366f1' },
+    architecture: { label: 'Build an LLM', emoji: '🏗️', world: 12, color: '#0891B2' },
+    vibe_coding: { label: 'Generative UI', emoji: '🛠️', world: 13, color: '#ec4899' },
+    personal_ai: { label: 'Local Personal AI', emoji: '🎓', world: 14, color: '#8b5cf6' },
 };
 
 function CircularMeter({ percent, size = 160 }) {
@@ -44,23 +52,24 @@ export default function Analytics() {
         analyticsAPI.getSummary().then(r => setBackendSummary(r.data)).catch(() => { });
     }, []);
 
-    // Compute AI Understanding Meter %
-    const worldsComp = completedWorlds.length;
-    const promptBest = promptHistory.length > 0 ? Math.max(...promptHistory.map(h => h.score)) : 0;
-    const totalMistakes = Object.values(mistakes).reduce((a, b) => a + b, 0);
-    const level = getLevel();
-
     // Component scores
-    const worldScore = (worldsComp / 6) * 40;        // 40% from worlds
+    const level = getLevel();
+    if (!level || xp === undefined) return <div style={{ padding: 60, textAlign: 'center', color: '#999' }}>Loading Stats...</div>;
+
+    const worldsComp = completedWorlds?.length || 0;
+    const promptBest = promptHistory?.length > 0 ? Math.max(...promptHistory.map(h => h.score)) : 0;
+    const totalMistakes = Object.values(mistakes || {}).reduce((a, b) => a + b, 0);
+
+    const worldScore = (worldsComp / 10) * 40;        // 40% from all 10 worlds
     const promptScore = (promptBest / 100) * 30;     // 30% from best prompt score
-    const levelScore = Math.min(level.level / 20, 1) * 20; // 20% from level
+    const levelScore = Math.min((level?.level || 1) / 20, 1) * 20; // 20% from level
     const mistakePenalty = Math.min(totalMistakes * 2, 10); // -10% max from mistakes
     const aiMeterPercent = Math.round(Math.max(0, Math.min(100, worldScore + promptScore + levelScore - mistakePenalty + (xp > 0 ? 5 : 0))));
 
     const meterLevel = aiMeterPercent >= 75 ? 'Advanced Learner' : aiMeterPercent >= 50 ? 'Developing' : aiMeterPercent >= 25 ? 'Beginner' : 'Just Starting';
 
     // Mistake data — merge local & backend
-    const allMistakes = { ...mistakes };
+    const allMistakes = { ...(mistakes || {}) };
     if (backendSummary?.mistakes) {
         Object.entries(backendSummary.mistakes).forEach(([k, v]) => {
             allMistakes[k] = (allMistakes[k] || 0) + v;
@@ -68,12 +77,20 @@ export default function Analytics() {
     }
 
     const CONCEPTS = [
-        { key: 'pattern', label: 'Pattern Learning', done: completedWorlds.includes(1) },
-        { key: 'prediction', label: 'Prediction Engine', done: completedWorlds.includes(2) },
-        { key: 'tokenization', label: 'Tokenization', done: completedWorlds.includes(3) },
-        { key: 'prompt', label: 'Prompt Engineering', done: completedWorlds.includes(4) },
-        { key: 'hallucination', label: 'Hallucination Detection', done: completedWorlds.includes(5) },
-        { key: 'training', label: 'AI Training', done: completedWorlds.includes(6) },
+        { key: 'pattern', label: 'Pattern Learning', done: completedWorlds?.includes(1) },
+        { key: 'prediction', label: 'Prediction Engine', done: completedWorlds?.includes(2) },
+        { key: 'tokenization', label: 'Tokenization', done: completedWorlds?.includes(3) },
+        { key: 'transformers', label: 'Transformers', done: completedWorlds?.includes(4) },
+        { key: 'attention', label: 'Attention Mechanism', done: completedWorlds?.includes(5) },
+        { key: 'embeddings', label: 'Vector Embeddings', done: completedWorlds?.includes(6) },
+        { key: 'context', label: 'Context Windows', done: completedWorlds?.includes(7) },
+        { key: 'prompt', label: 'Prompt Engineering', done: completedWorlds?.includes(8) },
+        { key: 'hallucination', label: 'Hallucination Detection', done: completedWorlds?.includes(9) },
+        { key: 'training', label: 'AI Training', done: completedWorlds?.includes(10) },
+        { key: 'rag', label: 'RAG & Vector DB', done: completedWorlds?.includes(11) },
+        { key: 'architecture', label: 'LLM Architecture', done: completedWorlds?.includes(12) },
+        { key: 'vibe_coding', label: 'Generative UI (v0.dev)', done: completedWorlds?.includes(13) },
+        { key: 'personal_ai', label: 'Local Personal AI', done: completedWorlds?.includes(14) },
     ];
 
     return (
@@ -100,7 +117,7 @@ export default function Analytics() {
                 {/* Quick stats */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
                     {[
-                        { label: 'Worlds Completed', value: `${worldsComp}/6`, color: '#C02633', icon: '🌍' },
+                        { label: 'Worlds Completed', value: `${worldsComp}/10`, color: '#C02633', icon: '🌍' },
                         { label: 'Total XP Earned', value: `${xp} XP`, color: '#2563EB', icon: '⚡' },
                         { label: 'Current Level', value: `Lv ${level.level}`, color: '#16a34a', icon: '⭐' },
                         { label: 'Best Prompt Score', value: promptBest > 0 ? `${promptBest}/100` : '—', color: '#7C3AED', icon: '✍️' },
@@ -122,11 +139,11 @@ export default function Analytics() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         {CONCEPTS.map(c => {
-                            const meta = TOPIC_META[c.key];
+                            const meta = TOPIC_META[c.key] || { color: '#9999aa', emoji: '❓', label: c.label };
                             return (
                                 <div key={c.key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', background: c.done ? `${meta.color}08` : '#F8F9FA', borderRadius: 8, border: `1px solid ${c.done ? meta.color + '30' : '#E5E7EB'}` }}>
                                     <span style={{ fontSize: '1.2rem' }}>{meta.emoji}</span>
-                                    <span style={{ flex: 1, fontSize: '0.85rem', fontWeight: 600, color: c.done ? '#1A1A2E' : '#9999AA' }}>{c.label}</span>
+                                    <span style={{ flex: 1, fontSize: '0.85rem', fontWeight: 600, color: c.done ? '#1A1A2E' : '#9999AA' }}>{meta.label}</span>
                                     <span style={{ fontSize: '0.85rem' }}>{c.done ? '✅' : '⬜'}</span>
                                 </div>
                             );

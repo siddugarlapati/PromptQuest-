@@ -29,13 +29,67 @@ const GOOD_BAD = [
     }
 ];
 
+const ALL_SCENARIOS = [
+    {
+        id: 'A',
+        title: 'The Roleplayer (Marketing)',
+        scenario: 'You are the lead marketing director for a new eco-friendly shoe brand. You need the AI to generate a 3-part launch strategy that is easy for a beginner to understand. Write a prompt that gives the AI this specific persona, the shoe brand context, and the output format constraint.',
+        requiredScore: 70,
+    },
+    {
+        id: 'B',
+        title: 'The Simplifier (Sci-Fi)',
+        scenario: 'You are a middle school science teacher. You want the AI to explain the concept of Quantum Computing to your 12-year-old students. Write a prompt that forces the AI into this role, specifies the target audience age, and asks for 3 simple bullet points with one real-world example.',
+        requiredScore: 80,
+    },
+    {
+        id: 'C',
+        title: 'The Architect (Data Extraction)',
+        scenario: 'Your boss tasked you with parsing a chaotic list of customer reviews. Write a prompt that instructs the AI to extract specific metadata (Product Name, Sentiment, and Key Issue). You must provide an example of the input text inside the prompt, and state that the output must strictly be in JSON format without any conversational pleasantries.',
+        requiredScore: 90,
+    },
+    {
+        id: 'D',
+        title: 'The Critic (Code Review)',
+        scenario: 'You are a Senior Software Engineer reviewing a Junior Developer\'s Python code for a login function. Write a prompt instructing the AI to act as a harsh but constructive critic. It must identify security flaws and provide exactly two code snippets: the bad code and the fixed code.',
+        requiredScore: 85,
+    },
+    {
+        id: 'E',
+        title: 'The Diplomat (HR Escalation)',
+        scenario: 'You are an HR Manager dealing with two employees who are arguing over desk space. Write a prompt asking the AI to draft a perfectly polite but firm email to both employees. The email must mention company policy, schedule a 15-minute mediation, and physically limit the output to exactly 2 paragraphs.',
+        requiredScore: 80,
+    },
+    {
+        id: 'F',
+        title: 'The Historian (Debate Prep)',
+        scenario: 'You are preparing for a debate on the Industrial Revolution. Write a prompt requiring the AI to provide 3 arguments FOR the revolution and 3 arguments AGAINST it. Crucially, you must instruct the AI to cite specific historical dates or figures for every single point it makes.',
+        requiredScore: 90,
+    }
+];
+
+// Dynamically pick 3 scenarios per day using the calendar date
+const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+const startIndex = (dayOfYear * 3) % ALL_SCENARIOS.length;
+const DAILY_SCENARIOS = [
+    ALL_SCENARIOS[(startIndex) % ALL_SCENARIOS.length],
+    ALL_SCENARIOS[(startIndex + 1) % ALL_SCENARIOS.length],
+    ALL_SCENARIOS[(startIndex + 2) % ALL_SCENARIOS.length],
+].map((s, idx) => ({ ...s, dailyLevelId: idx + 1 }));
+
 export default function PromptDashboard() {
-    const { promptHistory, addPromptScore } = useGame();
+    const { promptHistory, addPromptScore, completeWorld, addXP } = useGame();
     const [prompt, setPrompt] = useState('');
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState('lab');
+    const [activeTab, setActiveTab] = useState('hero');
     const [selectedExample, setSelectedExample] = useState(0);
+
+    // Hero specific state
+    const [currentHeroLevel, setCurrentHeroLevel] = useState(0);
+    const [heroPrompt, setHeroPrompt] = useState('');
+    const [heroResult, setHeroResult] = useState(null);
+    const [dailyPassedStatus, setDailyPassedStatus] = useState([false, false, false]);
 
     const handleScore = async () => {
         if (!prompt.trim()) return;
@@ -50,6 +104,36 @@ export default function PromptDashboard() {
                 await analyticsAPI.savePromptHistory({ prompt, score: r.total_score, grade: r.grade, grade_label: r.grade_label });
             } catch { }
             toast.success(`Score: ${r.total_score}/100 — Grade ${r.grade}`, { icon: '✍️' });
+        } catch {
+            toast.error('Backend not reachable!');
+        }
+        setLoading(false);
+    };
+
+    const handleHeroScore = async () => {
+        if (!heroPrompt.trim()) return;
+        setLoading(true);
+        try {
+            const res = await worldsAPI.scorePrompt(heroPrompt);
+            const r = res.data;
+            setHeroResult(r);
+            addPromptScore({ prompt: heroPrompt, score: r.total_score, grade: r.grade, grade_label: r.grade_label });
+            try { await analyticsAPI.savePromptHistory({ prompt: heroPrompt, score: r.total_score, grade: r.grade, grade_label: r.grade_label }); } catch { }
+
+            if (r.total_score >= DAILY_SCENARIOS[currentHeroLevel].requiredScore) {
+                toast.success('Level Passed! 🎉');
+                const newPassed = [...dailyPassedStatus];
+                newPassed[currentHeroLevel] = true;
+                setDailyPassedStatus(newPassed);
+
+                if (newPassed.every(v => v === true)) {
+                    toast.success('🏅 DAILY PROMPT MASTER ACHIEVED!', { icon: '🏆', duration: 5000 });
+                    completeWorld('daily_prompt_master'); // Give badge or trigger logic
+                    addXP(50);
+                }
+            } else {
+                toast.error(`Score too low. You need ${DAILY_SCENARIOS[currentHeroLevel].requiredScore}. Review the feedback!`);
+            }
         } catch {
             toast.error('Backend not reachable!');
         }
@@ -118,7 +202,8 @@ export default function PromptDashboard() {
     }
 
     const TABS = [
-        { id: 'lab', label: '✍️ Prompt Lab' },
+        { id: 'hero', label: '🚀 Zero to Hero' },
+        { id: 'lab', label: '✍️ Freeplay Lab' },
         { id: 'history', label: '📊 Score History' },
         { id: 'templates', label: '📋 Templates' },
         { id: 'examples', label: '✅ Good vs Bad' },
@@ -138,6 +223,92 @@ export default function PromptDashboard() {
                     </button>
                 ))}
             </div>
+
+            {/* ZERO TO HERO TAB */}
+            {activeTab === 'hero' && (
+                <div style={{ display: 'grid', gridTemplateColumns: heroResult ? '1fr 1fr' : '1fr', gap: 24 }}>
+                    <div>
+                        <div className="glass-card" style={{ padding: 24, marginBottom: 16, border: dailyPassedStatus.every(Boolean) ? '2px solid #FFD700' : 'none' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1A2E' }}>
+                                    Level {DAILY_SCENARIOS[currentHeroLevel].dailyLevelId}: {DAILY_SCENARIOS[currentHeroLevel].title}
+                                </div>
+                                {dailyPassedStatus.every(Boolean) ? (
+                                    <div className="badge-pill" style={{ background: '#FFD700', color: '#B8860B' }}>🏆 Mastered Today</div>
+                                ) : (
+                                    <div className="badge-pill">Daily Assignment {currentHeroLevel + 1}/3</div>
+                                )}
+                            </div>
+
+                            {/* Anti-copy scenario box */}
+                            <div style={{
+                                background: '#FFFDF0', border: '1px solid #FFD966', borderRadius: 8, padding: 16, marginBottom: 20,
+                                userSelect: 'none', WebkitUserSelect: 'none', cursor: 'not-allowed'
+                            }}>
+                                <div style={{ fontSize: '0.75rem', color: '#d97706', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, fontWeight: 700 }}>
+                                    🎯 Mission Briefing (Read & Synthesize - Do not copy)
+                                </div>
+                                <div style={{ fontSize: '0.9rem', color: '#1A1A2E', lineHeight: 1.6 }}>
+                                    {DAILY_SCENARIOS[currentHeroLevel].scenario}
+                                </div>
+                            </div>
+
+                            <div style={{ fontSize: '0.85rem', color: '#555566', fontWeight: 600, marginBottom: 8 }}>Write your prompt:</div>
+                            <textarea className="input-field" rows={6} value={heroPrompt}
+                                onChange={e => setHeroPrompt(e.target.value)}
+                                placeholder="Write the perfect prompt to fulfill the mission requirements..." style={{ resize: 'vertical', lineHeight: 1.6 }} />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+                                <span style={{ fontSize: '0.75rem', color: '#9999AA', fontWeight: 600 }}>
+                                    Target Score: <span style={{ color: '#C02633' }}>{DAILY_SCENARIOS[currentHeroLevel].requiredScore}+</span>
+                                </span>
+                                <button className="btn btn-gold" onClick={handleHeroScore} disabled={loading || !heroPrompt.trim()}>
+                                    {loading ? 'Scoring...' : '🚀 Submit Assignment'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Level Navigation */}
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                            {DAILY_SCENARIOS.map((lvl, index) => (
+                                <button key={lvl.id} onClick={() => { setCurrentHeroLevel(index); setHeroResult(null); setHeroPrompt(''); }}
+                                    className={`btn btn-sm ${currentHeroLevel === index ? 'btn-primary' : 'btn-ghost'}`}>
+                                    {dailyPassedStatus[index] ? '✅ ' : ''}Level {lvl.dailyLevelId}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {heroResult && (
+                        <div className="fade-in">
+                            <div className="glass-card" style={{ padding: 24, marginBottom: 16, textAlign: 'center', border: heroResult.total_score >= DAILY_SCENARIOS[currentHeroLevel].requiredScore ? '2px solid #16a34a' : '2px solid #C02633' }}>
+                                <div style={{ fontSize: '3rem', fontWeight: 900, fontFamily: "'Space Grotesk', sans-serif", color: heroResult.total_score >= DAILY_SCENARIOS[currentHeroLevel].requiredScore ? '#16a34a' : '#C02633' }}>
+                                    {heroResult.total_score >= DAILY_SCENARIOS[currentHeroLevel].requiredScore ? 'PASS 🎉' : 'FAIL ❌'}
+                                </div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1A1A2E', marginTop: 8 }}>
+                                    Score: {heroResult.total_score}<span style={{ fontSize: '0.9rem', color: '#9999AA' }}>/100</span>
+                                </div>
+                                <div style={{ marginTop: 8, fontSize: '0.85rem', color: '#555566' }}>
+                                    {heroResult.total_score >= DAILY_SCENARIOS[currentHeroLevel].requiredScore
+                                        ? "Great job! You met the criteria. Move to the next level."
+                                        : `You missed the target score of ${DAILY_SCENARIOS[currentHeroLevel].requiredScore}. See feedback below.`}
+                                </div>
+                                {heroResult.total_score >= DAILY_SCENARIOS[currentHeroLevel].requiredScore && currentHeroLevel < DAILY_SCENARIOS.length - 1 && (
+                                    <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => { setCurrentHeroLevel(currentHeroLevel + 1); setHeroResult(null); setHeroPrompt(''); }}>
+                                        Next Level →
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="glass-card" style={{ padding: 20 }}>
+                                <div style={{ fontSize: '0.75rem', color: '#9999AA', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Targeted Feedback</div>
+                                {heroResult.feedback.map((f, i) => (
+                                    <div key={i} style={{ fontSize: '0.83rem', color: '#555566', padding: '5px 0', borderBottom: '1px solid #F0F0F4' }}>{f}</div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* LAB TAB */}
             {activeTab === 'lab' && (

@@ -31,16 +31,22 @@ PromptQuest is a **virtual AI laboratory** for first-year students. Instead of l
 
 ## ✨ Features
 
-### 🌍 6 Interactive Learning Worlds
+### 🌍 12 Interactive Learning Worlds
 
 | World | Topic | What You Learn |
 |-------|-------|----------------|
 | 🧠 World 1 | Pattern Intelligence | AI learns from examples |
 | 📊 World 2 | Prediction Engine | Probability-based next-word prediction |
 | 🔤 World 3 | Tokenization Lab | How text is split into tokens |
-| ✍️ World 4 | Prompt Engineering | Write and score effective prompts |
-| 🕵️ World 5 | Hallucination Detective | Spot AI mistakes |
-| 🏋️ World 6 | Mini AI Trainer | Train your own mini AI model |
+| 🤖 World 4 | Transformers | Self-Attention and Pronoun Resolution |
+| 🎯 World 5 | Attention Lab | Visualizing attention weights |
+| 🗺️ World 6 | Embeddings Lab | Mapping words in 2D semantic space |
+| 🧠 World 7 | Context Window | Short-term memory limits and chat decay |
+| ✍️ World 8 | Prompt Engineering | Write and score effective prompts |
+| 🕵️ World 9 | Hallucination Detective | Spot AI mistakes |
+| 🏋️ World 10 | Mini AI Trainer | Train your own mini AI model |
+| 🗺️ World 11 | RAG & Vector DB | Learn Retrieval-Augmented Generation by uploading text to an embedded ChromaDB vector database and testing similarity search |
+| 🏗️ World 12 | Build an LLM | Drag, drop, and connect an LLM pipeline Architecture using a visual node builder |
 
 ### 🚀 Core Platform Features
 
@@ -59,7 +65,7 @@ PromptQuest is a **virtual AI laboratory** for first-year students. Instead of l
 |-------|-----------|
 | Frontend | React 18, Vite, React Router |
 | Backend | FastAPI, Uvicorn |
-| Storage | SQLite (via SQLAlchemy) + Browser localStorage |
+| Storage | SQLite (via aiosqlite/SQLAlchemy) |
 | Local AI | Ollama (optional, graceful fallback) |
 | Styling | Vanilla CSS, AU Brand Theme |
 
@@ -80,35 +86,27 @@ git clone https://github.com/siddugarlapati/PromptQuest-.git
 cd PromptQuest-
 ```
 
-### 2. Start the Backend
+### 2. Quick Start Configuration
+
+We have provided a unified startup script to boot the backend and frontend simultaneously without port conflicts. 
 
 ```bash
-cd backend
-python -m venv venv
-source venv/bin/activate      # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+chmod +x run.sh
+./run.sh
 ```
 
-Backend runs at: **http://localhost:8000**  
-API Docs: **http://localhost:8000/docs**
+- Your app will be live at: **http://localhost:5173**
+- Backend APIs run at: **http://localhost:8000**
+- API Docs are available at: **http://localhost:8000/docs**
 
-### 3. Start the Frontend
+### 3. (Optional) Enable Real AI with Ollama
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Frontend runs at: **http://localhost:5173**
-
-### 4. (Optional) Enable Real AI with Ollama
+If you see an error in the Playground about Ollama not running, open a new terminal window and run:
 
 ```bash
 # Install Ollama from https://ollama.ai/
-ollama pull llama3.2        # or tinyllama for faster responses
-ollama serve                # starts on http://localhost:11434
+ollama pull llama3.2        # Pull the model
+ollama serve                # Start the background daemon
 ```
 
 If Ollama is not running, the app gracefully falls back to simulation mode.

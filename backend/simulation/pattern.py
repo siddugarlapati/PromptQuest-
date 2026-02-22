@@ -16,8 +16,46 @@ for cat, items in CATEGORIES.items():
         ITEM_TO_CATEGORY[item] = cat
 
 
+def generate_number_pattern() -> dict:
+    """Generate a sequence prediction pattern (e.g. 2, 4, 6, 8 -> 10)."""
+    examples = []
+    # Build 3 examples of arithmetic progressions
+    for _ in range(3):
+        start = random.randint(1, 10)
+        step = random.randint(1, 5)
+        seq = [start + i*step for i in range(4)]
+        next_val = start + 4*step
+        examples.append({"item": " ".join(map(str, seq)), "category": str(next_val)})
+        
+    # Build the actual question
+    start = random.randint(2, 15)
+    step = random.randint(2, 6)
+    seq = [start + i*step for i in range(4)]
+    correct = start + 4*step
+    
+    options = [str(correct)]
+    while len(options) < 4:
+        wrong = correct + random.choice([-2, -1, 1, 2]) * step
+        if str(wrong) not in options and wrong > 0:
+            options.append(str(wrong))
+    random.shuffle(options)
+    
+    return {
+        "type": "number",
+        "examples": examples,
+        "question_item": " ".join(map(str, seq)),
+        "correct_answer": str(correct),
+        "options": options
+    }
+
+
 def get_pattern_question(difficulty: str = "easy") -> dict:
     """Generate a pattern recognition question."""
+    
+    # Randomly choose between word categories and number patterns
+    if random.random() < 0.4:
+        return generate_number_pattern()
+        
     if difficulty == "easy":
         num_examples = 3
         num_options = 3
@@ -28,27 +66,24 @@ def get_pattern_question(difficulty: str = "easy") -> dict:
         num_examples = 1
         num_options = 4
 
-    # Pick a target category
     target_cat = random.choice(list(CATEGORIES.keys()))
     target_items = CATEGORIES[target_cat]
 
-    # Pick examples (could be from same or mixed categories)
     examples = []
     for _ in range(num_examples):
         cat = random.choice(list(CATEGORIES.keys()))
         item = random.choice(CATEGORIES[cat])
         examples.append({"item": item, "category": cat})
 
-    # The question item is from the target category
     question_item = random.choice([i for i in target_items if i not in [e["item"] for e in examples]])
 
-    # Build answer options
     other_cats = [c for c in CATEGORIES.keys() if c != target_cat]
     wrong_cats = random.sample(other_cats, min(num_options - 1, len(other_cats)))
     options = [target_cat] + wrong_cats
     random.shuffle(options)
 
     return {
+        "type": "word",
         "examples": examples,
         "question_item": question_item,
         "correct_answer": target_cat,
@@ -58,8 +93,22 @@ def get_pattern_question(difficulty: str = "easy") -> dict:
 
 def check_pattern_answer(question_item: str, answer: str) -> dict:
     """Check a pattern recognition answer."""
-    correct = ITEM_TO_CATEGORY.get(question_item)
-    is_correct = answer == correct
+    # Check if it was a number sequence (has spaces and digits)
+    if " " in question_item and any(c.isdigit() for c in question_item):
+        nums = list(map(int, question_item.split()))
+        step = nums[1] - nums[0]
+        correct = str(nums[-1] + step)
+        is_correct = (answer == correct)
+        return {
+            "is_correct": is_correct,
+            "correct_answer": correct,
+            "xp_earned": 20 if is_correct else 0,
+            "feedback": f"✅ Correct! The pattern increases by {step}." if is_correct else f"❌ Not quite. The next number is {correct}."
+        }
+        
+    v = ITEM_TO_CATEGORY.get(question_item)
+    correct = v
+    is_correct = (answer == correct)
     xp_earned = 20 if is_correct else 0
     return {
         "is_correct": is_correct,

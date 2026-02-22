@@ -13,11 +13,16 @@ class GenerateRequest(BaseModel):
     prompt: str
     model: Optional[str] = None
     system: Optional[str] = "You are a helpful AI teacher explaining concepts clearly and simply."
+    temperature: Optional[float] = 0.7
+    max_tokens: Optional[int] = 512
 
 
 class CompareRequest(BaseModel):
     prompt: str
     model: Optional[str] = None
+    system: Optional[str] = "You are a helpful AI teacher. Answer clearly and concisely."
+    temperature: Optional[float] = 0.7
+    max_tokens: Optional[int] = 512
 
 
 @router.get("/status")
@@ -37,7 +42,13 @@ async def ollama_status():
 @router.post("/generate")
 async def generate_with_ollama(req: GenerateRequest):
     """Generate a response using local Ollama LLM."""
-    result = await ollama_client.generate(req.prompt, model=req.model, system=req.system)
+    result = await ollama_client.generate(
+        req.prompt, 
+        model=req.model, 
+        system=req.system,
+        temperature=req.temperature,
+        max_tokens=req.max_tokens
+    )
     return result
 
 
@@ -54,7 +65,9 @@ async def compare_simulation_vs_real(req: CompareRequest):
     real_result = await ollama_client.generate(
         req.prompt,
         model=req.model,
-        system="You are a helpful AI teacher. Answer clearly and concisely."
+        system=req.system,
+        temperature=req.temperature,
+        max_tokens=req.max_tokens
     )
 
     # Attention on prompt

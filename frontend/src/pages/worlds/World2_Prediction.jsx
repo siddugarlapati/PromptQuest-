@@ -14,6 +14,7 @@ export default function World2() {
     const [loading, setLoading] = useState(false);
     const [score, setScore] = useState({ correct: 0, total: 0 });
     const [showProbs, setShowProbs] = useState(false);
+    const [showGame, setShowGame] = useState(false);
 
     const fetchQuestion = async () => {
         setLoading(true);
@@ -64,87 +65,145 @@ export default function World2() {
                 onBack={() => navigate('/worlds')}
             />
 
-            {/* Concept Card */}
-            <div className="glass-card" style={{ padding: '16px 20px', marginBottom: 24, borderLeft: '3px solid #2563EB' }}>
-                <div style={{ fontSize: '0.8rem', color: '#2563EB', fontWeight: 700, marginBottom: 6 }}>📊 HOW LLMs PREDICT</div>
-                <p style={{ fontSize: '0.85rem', color: '#555566', lineHeight: 1.6 }}>
-                    Language models assign probabilities to every possible next word. The model picks the word with the highest probability — but in creative mode, it sometimes chooses lower-probability words for variety. This is called <strong style={{ color: '#1A1A2E' }}>temperature</strong> in AI.
-                </p>
-            </div>
+            {!showGame ? (
+                <div className="fade-in">
+                    <div className="glass-card" style={{ padding: 32, marginBottom: 24, borderLeft: '4px solid #2563EB' }}>
+                        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#2563EB', marginBottom: 16 }}>
+                            The Giant Autocomplete
+                        </h2>
+                        <p style={{ fontSize: '1rem', color: '#334155', lineHeight: 1.7, marginBottom: 16 }}>
+                            Large Language Models (like ChatGPT or Llama) seem magical, but fundamentally, they are just doing one thing over and over: <strong>predicting the next word.</strong>
+                        </p>
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#1A1A2E', marginTop: 24, marginBottom: 12 }}>
+                            Probability Distributions
+                        </h3>
+                        <p style={{ fontSize: '1rem', color: '#334155', lineHeight: 1.7, marginBottom: 16 }}>
+                            When you give an AI a prompt (e.g., "The sky is..."), it looks at billions of examples it read during training and calculates a mathematical <strong>probability</strong> for every word in its vocabulary.
+                            <br /><br />
+                            "blue" (95%) | "cloudy" (3%) | "dark" (1.9%) | "purple" (0.1%)
+                        </p>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <div style={{ fontSize: '0.85rem', color: '#555566' }}>Question {score.total + 1}</div>
-                <div style={{ fontSize: '0.8rem', background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', borderRadius: 100, padding: '5px 14px', color: '#2563EB', fontWeight: 600 }}>
-                    ✅ {score.correct}/{score.total}
-                </div>
-            </div>
-
-            {loading ? (
-                <div style={{ textAlign: 'center', padding: 60, color: '#9999AA' }}>Loading...</div>
-            ) : question ? (
-                <div className="glass-card fade-in" style={{ padding: 28 }}>
-                    {/* Prompt */}
-                    <div style={{ marginBottom: 28, textAlign: 'center' }}>
-                        <div style={{ fontSize: '0.75rem', color: '#9999AA', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Complete the sentence:</div>
-                        <div style={{ background: '#F8F9FA', border: '1px solid #E5E7EB', borderRadius: 12, padding: '20px 28px', display: 'inline-block' }}>
-                            <span style={{ fontSize: '1.3rem', fontWeight: 600, color: '#1A1A2E' }}>{question.prompt}</span>
-                            <span style={{ fontSize: '1.3rem', color: '#C02633', fontWeight: 900, marginLeft: 8 }}>____</span>
+                        <div style={{ background: '#F8FAFC', padding: 20, borderRadius: 12, border: '1px solid #E2E8F0', marginTop: 24 }}>
+                            <div style={{ fontSize: '0.85rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
+                                💡 The Temperature Setting
+                            </div>
+                            <p style={{ margin: 0, color: '#334155', lineHeight: 1.6, fontSize: '0.95rem' }}>
+                                A setting called <strong>Temperature</strong> controls how the AI picks from these probabilities. <br /><br />
+                                • <strong>Low Temp (0.0):</strong> Always picks the #1 most probable word. Fact-based, robotic, predictable.<br />
+                                • <strong>High Temp (0.8):</strong> Might pick the 2nd or 3rd option. Creative, weird, prone to "hallucinating."
+                            </p>
                         </div>
                     </div>
 
-                    {/* Options */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 24 }}>
-                        {question.options.map(opt => {
-                            let bg = '#F8F9FA'; let border = '1.5px solid #E5E7EB'; let color = '#1A1A2E';
-                            if (selected === opt) {
-                                if (result?.is_correct) { bg = 'rgba(22,163,74,0.08)'; border = '1.5px solid #16a34a'; color = '#16a34a'; }
-                                else { bg = 'rgba(220,38,38,0.08)'; border = '1.5px solid #dc2626'; color = '#dc2626'; }
-                            }
-                            if (selected && opt === result?.correct_answer && !result?.is_correct) {
-                                bg = 'rgba(22,163,74,0.06)'; border = '1.5px solid #16a34a';
-                            }
-                            return (
-                                <button key={opt} disabled={!!selected} onClick={() => handleAnswer(opt)}
-                                    style={{ padding: '14px 16px', borderRadius: 10, border, background: bg, color, fontSize: '0.95rem', fontWeight: 600, cursor: selected ? 'default' : 'pointer', fontFamily: 'Inter, sans-serif', transition: 'all 0.2s' }}>
-                                    {opt}
-                                </button>
-                            );
-                        })}
+                    <button className="btn btn-primary btn-lg" style={{ width: '100%', fontSize: '1.1rem', padding: 18, background: '#2563EB' }} onClick={() => setShowGame(true)}>
+                        Let's Play: Prediction Lab 🚀
+                    </button>
+                </div>
+            ) : (
+                <div className="fade-in">
+
+                    {/* Concept Card */}
+                    <div className="glass-card" style={{ padding: '16px 20px', marginBottom: 24, borderLeft: '3px solid #2563EB' }}>
+                        <div style={{ fontSize: '0.8rem', color: '#2563EB', fontWeight: 700, marginBottom: 6 }}>📊 HOW LLMs PREDICT</div>
+                        <p style={{ fontSize: '0.85rem', color: '#555566', lineHeight: 1.6 }}>
+                            Language models assign probabilities to every possible next word. The model picks the word with the highest probability — but in creative mode, it sometimes chooses lower-probability words for variety. This is called <strong style={{ color: '#1A1A2E' }}>temperature</strong> in AI.
+                        </p>
                     </div>
 
-                    {/* Probability Bars */}
-                    {showProbs && question.predictions && (
-                        <div style={{ marginBottom: 20 }}>
-                            <div style={{ fontSize: '0.75rem', color: '#9999AA', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
-                                🤖 Model Probability Distribution
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                        <div style={{ fontSize: '0.85rem', color: '#555566' }}>Question {score.total + 1}</div>
+                        <div style={{ fontSize: '0.8rem', background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', borderRadius: 100, padding: '5px 14px', color: '#2563EB', fontWeight: 600 }}>
+                            ✅ {score.correct}/{score.total}
+                        </div>
+                    </div>
+
+                    {loading ? (
+                        <div style={{ textAlign: 'center', padding: 60, color: '#9999AA' }}>Loading...</div>
+                    ) : question ? (
+                        <div className="glass-card fade-in" style={{ padding: 28 }}>
+                            {/* Prompt */}
+                            <div style={{ marginBottom: 28, textAlign: 'center' }}>
+                                <div style={{ fontSize: '0.75rem', color: '#9999AA', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Complete the sentence:</div>
+                                <div style={{ background: '#F8F9FA', border: '1px solid #E5E7EB', borderRadius: 12, padding: '20px 28px', display: 'inline-block' }}>
+                                    <span style={{ fontSize: '1.3rem', fontWeight: 600, color: '#1A1A2E' }}>{question.prompt}</span>
+                                    <span style={{ fontSize: '1.3rem', color: '#C02633', fontWeight: 900, marginLeft: 8 }}>____</span>
+                                </div>
                             </div>
-                            {question.predictions.map((p, i) => (
-                                <div key={i} className="prob-bar-container">
-                                    <div className="prob-bar-label">
-                                        <span style={{ fontWeight: 600, color: '#1A1A2E' }}>{p.word}</span>
-                                        <span style={{ color: '#555566' }}>{p.probability}%</span>
+
+                            {/* Options */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 24 }}>
+                                {question.options.map(opt => {
+                                    let bg = '#F8F9FA'; let border = '1.5px solid #E5E7EB'; let color = '#1A1A2E';
+                                    if (selected === opt) {
+                                        if (result?.is_correct) { bg = 'rgba(22,163,74,0.08)'; border = '1.5px solid #16a34a'; color = '#16a34a'; }
+                                        else { bg = 'rgba(220,38,38,0.08)'; border = '1.5px solid #dc2626'; color = '#dc2626'; }
+                                    }
+                                    if (selected && opt === result?.correct_answer && !result?.is_correct) {
+                                        bg = 'rgba(22,163,74,0.06)'; border = '1.5px solid #16a34a';
+                                    }
+                                    return (
+                                        <button key={opt} disabled={!!selected} onClick={() => handleAnswer(opt)}
+                                            style={{ padding: '14px 16px', borderRadius: 10, border, background: bg, color, fontSize: '0.95rem', fontWeight: 600, cursor: selected ? 'default' : 'pointer', fontFamily: 'Inter, sans-serif', transition: 'all 0.2s' }}>
+                                            {opt}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Probability Bars */}
+                            {showProbs && question.predictions && (
+                                <div style={{ marginBottom: 20, marginTop: 12 }}>
+                                    <div style={{ fontSize: '0.8rem', color: '#555566', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 16, fontWeight: 700 }}>
+                                        🤖 Model Probability Distribution
                                     </div>
-                                    <div className="prob-bar-track">
-                                        <div className="prob-bar-fill" style={{ width: `${p.probability}%` }} />
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                        {question.predictions.map((p, i) => {
+                                            const percent = p.probability;
+                                            let color = '#2563EB'; // Blue default
+                                            if (percent > 60) color = '#16a34a'; // Green high confidence
+                                            else if (percent < 10) color = '#dc2626'; // Red low confidence
+                                            else if (percent > 30) color = '#d97706'; // Amber medium
+
+                                            return (
+                                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                                                    <div style={{ width: 80, fontSize: '0.95rem', fontWeight: 600, color: '#1A1A2E', textAlign: 'right' }}>
+                                                        {p.word}
+                                                    </div>
+                                                    <div style={{ flex: 1, background: 'rgba(0,0,0,0.05)', borderRadius: 100, height: 12, overflow: 'hidden' }}>
+                                                        <div style={{
+                                                            width: `${percent}%`,
+                                                            height: '100%',
+                                                            background: color,
+                                                            borderRadius: 100,
+                                                            transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                            boxShadow: `0 0 8px ${color}40`
+                                                        }} />
+                                                    </div>
+                                                    <div style={{ width: 45, fontSize: '0.85rem', fontWeight: 700, color }}>
+                                                        {percent}%
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    )}
+                            )}
 
-                    {result && (
-                        <div className={result.is_correct ? 'feedback-correct' : 'feedback-wrong'}>
-                            {result.feedback}
-                        </div>
-                    )}
+                            {result && (
+                                <div className={result.is_correct ? 'feedback-correct' : 'feedback-wrong'}>
+                                    {result.feedback}
+                                </div>
+                            )}
 
-                    {result && (
-                        <button className="btn btn-primary" style={{ marginTop: 16, width: '100%' }} onClick={fetchQuestion}>
-                            Next Question →
-                        </button>
-                    )}
+                            {result && (
+                                <button className="btn btn-primary" style={{ marginTop: 16, width: '100%' }} onClick={fetchQuestion}>
+                                    Next Question →
+                                </button>
+                            )}
+                        </div>
+                    ) : null}
                 </div>
-            ) : null}
+            )}
         </div>
     );
 }
