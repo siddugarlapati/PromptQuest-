@@ -99,6 +99,43 @@ async def compare_simulation_vs_real(req: CompareRequest):
         )
     }
 
+@router.post("/generate-ui")
+async def generate_ui(req: GenerateRequest):
+    """
+    Acts as a Vibe Coding AI Engineer. Takes a user prompt and returns raw React code.
+    Instructs the LLM to output ONLY a valid React Default Export component without markdown.
+    """
+    system_prompt = (
+        "You are an expert Frontend React Developer. "
+        "The user will describe a UI component or small app. "
+        "You must return ONLY raw, valid React code using standard JavaScript. "
+        "Do NOT wrap it in markdown blockticks like ```javascript. "
+        "Do NOT import anything from 'react'. Assume React and useState/useEffect are globally available. "
+        "Your code must have a default export of the main component. "
+        "Use inline styles or standard CSS. Make it beautiful, complete, and functional. "
+        "Return ONLY the raw code string, nothing else."
+    )
+
+    result = await ollama_client.generate(
+        prompt=req.prompt,
+        model=req.model,
+        system=system_prompt,
+        temperature=0.7,
+        max_tokens=2048
+    )
+
+    if not result["success"]:
+        return {"error": result["error"]}
+
+    # Clean up any potential markdown ticks the LLM might stubbornly include
+    raw_code = result["response"]
+    if raw_code.startswith("```"):
+        raw_code = "\n".join(raw_code.split("\n")[1:])
+    if raw_code.endswith("```"):
+        raw_code = "\n".join(raw_code.split("\n")[:-1])
+
+    return {"success": True, "code": raw_code.strip()}
+
 
 def _generate_simulation_response(prompt: str, score_data: dict) -> str:
     """Generate a simple template-based simulation response."""

@@ -62,6 +62,8 @@ export const ollamaAPI = {
     api.post('/ollama/generate', { prompt, model, system, temperature, max_tokens: maxTokens }),
   compare: (prompt, model = null, system = null, temperature = 0.7, maxTokens = 512) =>
     api.post('/ollama/compare', { prompt, model, system, temperature, max_tokens: maxTokens }),
+  generateUI: (prompt, model = null) =>
+    api.post('/ollama/generate-ui', { prompt, model, system: null, temperature: 0.7, max_tokens: 2048 }),
 };
 
 // ─── ANALYTICS APIS ─────────────────────────────────────────

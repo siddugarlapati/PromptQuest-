@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useGame } from '../../context/GameContext';
 import { WorldHeader } from './World1_Basics';
 import toast from 'react-hot-toast';
+import { ollamaAPI } from '../../services/api';
+import { Sandpack } from "@codesandbox/sandpack-react";
 
-// A mock simulator of an AI streaming code and rendering it dynamically
+// Real-Time Vibe Coding Environment powered by Ollama and Sandpack
 export default function World13_GenerativeUI() {
     const navigate = useNavigate();
     const { addXP, completeWorld } = useGame();
@@ -16,96 +18,50 @@ export default function World13_GenerativeUI() {
     const [attempted, setAttempted] = useState(false);
     const [showGame, setShowGame] = useState(false);
 
-    // Pre-written mock response for educational simulation
-    const calculatorCode = `function Calculator() {
-  const [display, setDisplay] = React.useState('0');
-  
-  const handleNum = (num) => {
-    setDisplay(display === '0' ? num : display + num);
-  };
-  const handleClear = () => setDisplay('0');
-  const handleEq = () => {
-    try { setDisplay(eval(display).toString()); }
-    catch { setDisplay('Error'); }
-  };
+    const defaultCode = `import React from 'react';
 
+export default function App() {
   return (
-    <div style={{ background: '#1e293b', padding: 24, borderRadius: 16, width: 280, color: 'white', fontFamily: 'monospace' }}>
-      <div style={{ background: '#0f172a', padding: 16, fontSize: 32, textAlign: 'right', borderRadius: 8, marginBottom: 16 }}>
-        {display}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-        {['7','8','9','/','4','5','6','*','1','2','3','-','C','0','=','+'].map(btn => (
-          <button 
-            key={btn}
-            onClick={() => btn === 'C' ? handleClear() : btn === '=' ? handleEq() : handleNum(btn)}
-            style={{ 
-              padding: '16px 0', fontSize: 20, borderRadius: 8, cursor: 'pointer', border: 'none',
-              background: btn === '=' ? '#10b981' : btn === 'C' ? '#ef4444' : '#334155', color: 'white'
-            }}>
-            {btn}
-          </button>
-        ))}
-      </div>
+    <div style={{ padding: 40, fontFamily: 'sans-serif', textAlign: 'center' }}>
+      <h1 style={{ color: '#ec4899' }}>Vibe Coding Interface</h1>
+      <p style={{ color: '#555' }}>Type a prompt below to generate a real React app!</p>
     </div>
   );
 }`;
+
+    // Remove duplicate declaration
 
     const handleGenerate = async () => {
         if (!prompt.trim()) return;
 
         setIsGenerating(true);
-        setStreamedCode('');
         setPreviewActive(false);
+        setStreamedCode('// Asking local AI to write code... Please wait.\n// This might take 10-30 seconds depending on your machine.');
 
-        // Simulate streaming tokens from an LLM
-        let currentCode = '';
-        for (let i = 0; i < calculatorCode.length; i++) {
-            currentCode += calculatorCode[i];
-            setStreamedCode(currentCode);
-            // Wait 5ms between characters to simulate token streaming
-            await new Promise(r => setTimeout(r, 5));
+        try {
+            const res = await ollamaAPI.generateUI(prompt);
+
+            if (res.data && res.data.success && res.data.code) {
+                setStreamedCode(res.data.code);
+                setPreviewActive(true);
+
+                if (!attempted) {
+                    addXP(50);
+                    completeWorld(13, 'ai_engineer');
+                    toast.success('🛠️ Real-time App Generated! +50 XP');
+                    setAttempted(true);
+                }
+            } else {
+                toast.error(res.data?.error || "Failed to generate valid React code.");
+                setStreamedCode(defaultCode);
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Error communicating with Ollama.");
+            setStreamedCode(defaultCode);
+        } finally {
+            setIsGenerating(false);
         }
-
-        setIsGenerating(false);
-        setPreviewActive(true);
-
-        if (!attempted && prompt.toLowerCase().includes('calculator')) {
-            addXP(30);
-            completeWorld(13, 'ai_explorer');
-            toast.success('🛠️ Vibe Coding Successful! +30 XP');
-            setAttempted(true);
-        } else if (!attempted) {
-            toast('Try prompting specifically for a "Calculator" to earn XP.', { icon: '💡' });
-        }
-    };
-
-    // Actual executable React component that is "generated"
-    const RenderedCalculator = () => {
-        const [display, setDisplay] = useState('0');
-        const handleNum = (num) => setDisplay(display === '0' ? num : display + num);
-        const handleClear = () => setDisplay('0');
-        const handleEq = () => {
-            try { setDisplay(eval(display).toString()); }
-            catch { setDisplay('Error'); }
-        };
-
-        return (
-            <div style={{ background: '#1e293b', padding: 24, borderRadius: 16, width: 280, color: 'white', fontFamily: 'monospace', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)' }}>
-                <div style={{ background: '#0f172a', padding: 16, fontSize: 32, textAlign: 'right', borderRadius: 8, marginBottom: 16 }}>{display}</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                    {['7', '8', '9', '/', '4', '5', '6', '*', '1', '2', '3', '-', 'C', '0', '=', '+'].map(btn => (
-                        <button
-                            key={btn}
-                            onClick={() => btn === 'C' ? handleClear() : btn === '=' ? handleEq() : handleNum(btn)}
-                            style={{ padding: '16px 0', fontSize: 20, borderRadius: 8, cursor: 'pointer', border: 'none', background: btn === '=' ? '#10b981' : btn === 'C' ? '#ef4444' : '#334155', color: 'white' }}
-                        >
-                            {btn}
-                        </button>
-                    ))}
-                </div>
-            </div>
-        );
     };
 
     return (
@@ -164,9 +120,10 @@ export default function World13_GenerativeUI() {
                                 className="input-field"
                                 value={prompt}
                                 onChange={e => setPrompt(e.target.value)}
-                                placeholder="E.g. Build me a dark-mode calculator app"
+                                placeholder="E.g. Build me a sleek dark-mode Pomodoro timer..."
                                 style={{ flex: 1 }}
                                 onKeyDown={e => e.key === 'Enter' && handleGenerate()}
+                                disabled={isGenerating}
                             />
                             <button className="btn btn-primary" onClick={handleGenerate} disabled={isGenerating || !prompt.trim()}>
                                 {isGenerating ? 'Generating...' : 'Generate UI ✨'}
@@ -189,20 +146,26 @@ export default function World13_GenerativeUI() {
                             </pre>
                         </div>
 
-                        {/* Preview Window */}
-                        <div className="glass-card" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', backgroundImage: 'radial-gradient(#e2e8f0 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
-                            {previewActive ? (
-                                <div className="fade-in">
-                                    <RenderedCalculator />
-                                </div>
-                            ) : (
-                                <div style={{ color: '#94a3b8', textAlign: 'center' }}>
-                                    <div style={{ fontSize: '3rem', marginBottom: 12 }}>🖥️</div>
-                                    <div>UI Preview Canvas</div>
-                                    <div style={{ fontSize: '0.8rem', marginTop: 8 }}>Awaiting prompt...</div>
-                                </div>
-                            )}
+                        {/* Preview Window powered by Sandpack */}
+                        <div className="glass-card" style={{ flex: 1, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                            <Sandpack
+                                template="react"
+                                theme="dark"
+                                files={{
+                                    "/App.js": streamedCode
+                                }}
+                                customSetup={{
+                                    dependencies: { "react": "^18.0.0", "react-dom": "^18.0.0" }
+                                }}
+                                options={{
+                                    showNavigator: false,
+                                    showTabs: true,
+                                    editorHeight: "100%",
+                                    autoReload: true,
+                                }}
+                            />
                         </div>
+
                     </div>
 
                     <style>{`

@@ -2,7 +2,7 @@
 
 ![PromptQuest Demo](https://img.shields.io/badge/Status-Active-success) ![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB) ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi) ![Ollama](https://img.shields.io/badge/Ollama-Local_LLM-white)
 
-Welcome to **PromptQuest** — a patentable, interactive educational simulation that deconstructs how artificial intelligence works. Instead of just talking to a chatbot, PromptQuest lets you "look under the hood" of Large Language Models (LLMs) and play gamified challenges to master the mechanics of AI.
+Welcome to **PromptQuest** — aninteractive educational simulation that deconstructs how artificial intelligence works. Instead of just talking to a chatbot, PromptQuest lets you "look under the hood" of Large Language Models (LLMs) and play gamified challenges to master the mechanics of AI.
 
 ## ✨ Core Features
 
